@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">IfBoredThanThis</string>
+    <string name="greeting_morning">Доброе утро!</string>
+    <string name="greeting_afternoon">Добрый день!</string>
+    <string name="greeting_evening">Добрый вечер!</string>
+    <string name="greeting_night">Доброй ночи!</string>
+    <string name="mood_question">Что будем делать ?</string>
+    <string name="mood_random">Случайная активность</string>
+    <string name="mood_education">Обучение</string>
+    <string name="mood_recreational">Развлечения</string>
+    <string name="mood_social">Общение</string>
+    <string name="mood_diy">Сделай сам</string>
+    <string name="mood_charity">Благотворительность</string>
+    <string name="mood_cooking">Кулинария</string>
+    <string name="mood_relaxation">Расслабление</string>
+    <string name="mood_music">Музыка</string>
+    <string name="mood_busywork">Рутина</string>
+    <string name="recommendation_title">Рекомендация для вас</string>
+    <string name="activity_label">Активность: %1$s</string>
+    <string name="type_label">Тип: %1$s</string>
+    <string name="participants_label">Участники: %1$d</string>
+    <string name="price_free">Бесплатно</string>
+    <string name="price_paid">$%1$.2f</string>
+    <string name="link_label">Ссылка: %1$s</string>
+    <string name="error_label">Ошибка</string>
+    <string name="new_recommendation">Новая рекомендация</string>
+    <string name="back">Назад</string>
+    <string name="nav_home">Главная</string>
+    <string name="nav_history">История</string>
+    <string name="nav_favorites">Избранное</string>
+    <string name="history_placeholder">Экран истории (в разработке)</string>
+    <string name="favorites_placeholder">Экран избранного (в разработке)</string>
+    <string name="error_unknown">Неизвестная ошибка</string>
+</resources>

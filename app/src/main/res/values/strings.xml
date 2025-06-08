@@ -31,4 +31,23 @@
     <string name="history_placeholder">Экран истории (в разработке)</string>
     <string name="favorites_placeholder">Экран избранного (в разработке)</string>
     <string name="error_unknown">Неизвестная ошибка</string>
+    <string name="favorites_limit">В избранном слишком много записей (%1$d). Это может замедлить приложение. Удалите ненужные активности.</string>
+    <string name="start_button">НАЧНЁМ</string>
+    <string name="filter_participants">Количество участников</string>
+    <string name="filter_price">Цена</string>
+    <string name="filter_accessibility">Доступность</string>
+    <string name="filter_min_max_price">Диапазон цены</string>
+    <string name="filter_min_max_accessibility">Диапазон доступности</string>
+    <string name="select_categories">Выберите категории</string>
+    <string name="any">Любая</string>
+    <string name="any_participants">Любое количество</string>
+    <string name="accessibility_info">Этот фильтр определяет уровень доступности активности (например, физическая или финансовая нагрузка). 0.0 — легко, 1.0 — сложно.</string>
+    <string name="delete">Удалить</string>
+    <string name="delete_all">Удалить всё</string>
+    <string name="delete_success">Удалено успешно</string>
+    <string name="delete_selected">Удалить выбранные</string>
+    <string name="select_activities">Выберите активности</string>
+    <string name="confirm_delete_all">Удалить все записи?</string>
+    <string name="sort_by_category">Сортировать по категории</string>
+    <string name="all_categories">Все категории</string>
 </resources>

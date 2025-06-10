@@ -21,6 +21,7 @@
     <string name="participants_label">Участники: %1$d</string>
     <string name="price_free">Бесплатно</string>
     <string name="price_paid">$%1$.2f</string>
+    <string name="price_paid_label">Платно</string>
     <string name="link_label">Ссылка: %1$s</string>
     <string name="error_label">Ошибка</string>
     <string name="new_recommendation">Новая рекомендация</string>
@@ -28,8 +29,8 @@
     <string name="nav_home">Главная</string>
     <string name="nav_history">История</string>
     <string name="nav_favorites">Избранное</string>
-    <string name="history_placeholder">Экран истории (в разработке)</string>
-    <string name="favorites_placeholder">Экран избранного (в разработке)</string>
+    <string name="history_placeholder">Тут пока ничего нет</string>
+    <string name="favorites_placeholder">Тут пока ничего нет</string>
     <string name="error_unknown">Неизвестная ошибка</string>
     <string name="favorites_limit">В избранном слишком много записей (%1$d). Это может замедлить приложение. Удалите ненужные активности.</string>
     <string name="start_button">НАЧНЁМ</string>
@@ -50,4 +51,5 @@
     <string name="confirm_delete_all">Удалить все записи?</string>
     <string name="sort_by_category">Сортировать по категории</string>
     <string name="all_categories">Все категории</string>
+    <string name="filters">Нюансы</string>
 </resources>

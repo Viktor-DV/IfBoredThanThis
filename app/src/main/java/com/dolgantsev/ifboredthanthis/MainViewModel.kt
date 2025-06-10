@@ -15,8 +15,8 @@ import com.dolgantsev.ifboredthanthis.model.ActivityResponse
 import com.dolgantsev.ifboredthanthis.network.RetrofitClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import android.util.Log
 
-// ViewModel для управления состоянием приложения
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Состояние выбранных категорий
     private val _selectedCategories = mutableStateListOf<Int>()
@@ -56,7 +56,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val activityDao: ActivityDao
 
     init {
-        // Инициализация базы данных
         val database = Room.databaseBuilder(
             application,
             AppDatabase::class.java,
@@ -102,27 +101,105 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _selectedCategories.mapNotNull { categoryToType[it] }
                 }
                 val type = types.randomOrNull()
-                val (minPrice, maxPrice) = if (_price.value == "free") 0f to 0f else _minMaxPrice.value
-                val (minAccessibility, maxAccessibility) = if (_accessibility.floatValue == 0f) 0f to 1f else _minMaxAccessibility.value
-                val response = RetrofitClient.apiService.getActivityWithFilters(
-                    type = type,
-                    participants = _participants.value,
-                    price = if (_price.value == "any") null else if (_price.value == "free") 0f else 1f,
-                    minPrice = if (_price.value == "any") minPrice else null,
-                    maxPrice = if (_price.value == "any") maxPrice else null,
-                    accessibility = if (_accessibility.floatValue == 0f) null else _accessibility.floatValue,
-                    minAccessibility = if (_accessibility.floatValue == 0f) null else minAccessibility,
-                    maxAccessibility = if (_accessibility.floatValue == 0f) null else maxAccessibility
-                )
-                _activity.value = response
+
+                // Определяем параметры цены
+                val (priceParam, minPriceParam, maxPriceParam) = when (_price.value) {
+                    "free" -> Triple(0f, null, null)
+                    "paid" -> Triple(null, _minMaxPrice.value.first, _minMaxPrice.value.second)
+                    else -> Triple(null, null, null)
+                }
+
+                // Определяем параметры доступности
+                val accessibilityParam = if (_accessibility.floatValue > 0f) _accessibility.floatValue else null
+                val (minAccParam, maxAccParam) = if (_accessibility.floatValue > 0f) {
+                    _minMaxAccessibility.value
+                } else {
+                    null to null
+                }
+
+                // Лог параметров запроса
+                Log.d("API", "Requesting with: type=$type, participants=${_participants.value}, " +
+                        "price=$priceParam, minPrice=$minPriceParam, maxPrice=$maxPriceParam, " +
+                        "accessibility=$accessibilityParam, minAcc=$minAccParam, maxAcc=$maxAccParam")
+
+                // Выполняем запрос
+                val response = if (type == null && _participants.value == null && priceParam == null && minPriceParam == null &&
+                    maxPriceParam == null && accessibilityParam == null && minAccParam == null && maxAccParam == null) {
+                    // Если нет фильтров, используем /random
+                    RetrofitClient.apiService.getRandomActivity()
+                } else {
+                    // Используем /filter и выбираем случайный элемент
+                    val filterResponse = RetrofitClient.apiService.getActivityWithFilters(
+                        type = type,
+                        participants = _participants.value,
+                        price = priceParam,
+                        minPrice = minPriceParam,
+                        maxPrice = maxPriceParam,
+                        accessibility = accessibilityParam,
+                        minAccessibility = minAccParam,
+                        maxAccessibility = maxAccParam
+                    )
+                    if (filterResponse.isEmpty()) {
+                        throw Exception("No activities found")
+                    }
+                    filterResponse[kotlin.random.Random.nextInt(filterResponse.size)]
+                }
+
+                _activity.value = validateResponse(response)
                 _errorMessage.value = ""
-                // Сохранить в историю
                 saveToHistory(response)
+                Log.d("API", "Success: ${response.activity}, participants=${response.participants}, price=${response.price}")
+
             } catch (e: Exception) {
                 val fallbackError = getApplication<Application>().getString(R.string.error_unknown)
-                _errorMessage.value = "$errorLabel: ${e.message ?: fallbackError}"
+                val errorMsg = "$errorLabel: ${e.message ?: fallbackError}"
+                _errorMessage.value = errorMsg
+                Log.e("API", "Error: $errorMsg", e)
+                // Устанавливаем заглушку при ошибке
+                _activity.value = ActivityResponse(
+                    activity = "Default Activity",
+                    type = "recreational",
+                    participants = 1,
+                    price = 0f,
+                    link = "",
+                    key = "default",
+                    accessibility = 0f
+                )
             }
         }
+    }
+
+    // Валидация и обработка ответа
+    private fun validateResponse(response: ActivityResponse): ActivityResponse {
+        return response.copy(
+            participants = response.participants ?: 1,
+            price = response.price ?: 0f,
+            accessibility = response.accessibility ?: 0f
+        )
+    }
+
+    // Получение списка истории
+    fun getHistory(): Flow<List<ActivityEntity>> {
+        val flow = if (_historySortCategory.value.isEmpty()) {
+            activityDao.getHistoryActivities()
+        } else {
+            val type = stringToType.entries.find { getApplication<Application>().getString(it.key) == _historySortCategory.value }?.value
+            type?.let { activityDao.getHistoryActivitiesByType(it) } ?: activityDao.getHistoryActivities()
+        }
+        Log.d("MainViewModel", "Fetching history with sort category: ${_historySortCategory.value}")
+        return flow
+    }
+
+    // Получение списка избранного
+    fun getFavorites(): Flow<List<ActivityEntity>> {
+        val flow = if (_favoritesSortCategory.value.isEmpty()) {
+            activityDao.getFavoriteActivities()
+        } else {
+            val type = stringToType.entries.find { getApplication<Application>().getString(it.key) == _favoritesSortCategory.value }?.value
+            type?.let { activityDao.getFavoriteActivitiesByType(it) } ?: activityDao.getFavoriteActivities()
+        }
+        Log.d("MainViewModel", "Fetching favorites with sort category: ${_favoritesSortCategory.value}")
+        return flow
     }
 
     // Сохранение активности в историю
@@ -130,37 +207,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val entity = ActivityEntity(
             activity = activity.activity,
             type = activity.type,
-            participants = activity.participants,
-            price = activity.price,
+            participants = activity.participants ?: 1,
+            price = activity.price ?: 0f,
             link = activity.link,
             timestamp = System.currentTimeMillis(),
             isFavorite = false
         )
+        Log.d("MainViewModel", "Saving to history: $entity")
         activityDao.insertActivity(entity)
-        // Проверка лимита истории (50 записей)
         val count = activityDao.getHistoryCount()
+        Log.d("MainViewModel", "History count: $count")
         if (count > 50) {
             activityDao.deleteOldestHistory(count - 50)
-        }
-    }
-
-    // Получение списка истории
-    fun getHistory(): Flow<List<ActivityEntity>> {
-        return if (_historySortCategory.value.isEmpty()) {
-            activityDao.getHistoryActivities()
-        } else {
-            val type = stringToType.entries.find { getApplication<Application>().getString(it.key) == _historySortCategory.value }?.value
-            type?.let { activityDao.getHistoryActivitiesByType(it) } ?: activityDao.getHistoryActivities()
-        }
-    }
-
-    // Получение списка избранного
-    fun getFavorites(): Flow<List<ActivityEntity>> {
-        return if (_favoritesSortCategory.value.isEmpty()) {
-            activityDao.getFavoriteActivities()
-        } else {
-            val type = stringToType.entries.find { getApplication<Application>().getString(it.key) == _favoritesSortCategory.value }?.value
-            type?.let { activityDao.getFavoriteActivitiesByType(it) } ?: activityDao.getFavoriteActivities()
+            Log.d("MainViewModel", "Deleted oldest history entries: ${count - 50}")
         }
     }
 
@@ -228,8 +287,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val existing = activityDao.findActivity(
                 activity.activity,
                 activity.type,
-                activity.participants,
-                activity.price,
+                activity.participants ?: 1,
+                activity.price ?: 0f,
                 activity.link
             )
             if (existing != null) {
@@ -238,15 +297,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val entity = ActivityEntity(
                     activity = activity.activity,
                     type = activity.type,
-                    participants = activity.participants,
-                    price = activity.price,
+                    participants = activity.participants ?: 1,
+                    price = activity.price ?: 0f,
                     link = activity.link,
                     timestamp = System.currentTimeMillis(),
                     isFavorite = true
                 )
                 activityDao.insertActivity(entity)
             }
-            // Проверка количества избранных
             val count = activityDao.getFavoritesCount()
             if (count > 100) {
                 _favoritesWarning.value = getApplication<Application>().getString(R.string.favorites_limit, count)
@@ -261,8 +319,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val existing = activityDao.findActivity(
             activity.activity,
             activity.type,
-            activity.participants,
-            activity.price,
+            activity.participants ?: 1,
+            activity.price ?: 0f,
             activity.link
         )
         return existing?.isFavorite ?: false
@@ -291,7 +349,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteFavoriteActivities(ids: List<Long>) {
         viewModelScope.launch {
             activityDao.deleteByIds(ids)
-            // Проверка количества избранных после удаления
             val count = activityDao.getFavoritesCount()
             if (count > 100) {
                 _favoritesWarning.value = getApplication<Application>().getString(R.string.favorites_limit, count)

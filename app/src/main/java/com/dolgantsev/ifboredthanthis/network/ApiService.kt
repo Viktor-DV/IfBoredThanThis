@@ -4,14 +4,11 @@ import com.dolgantsev.ifboredthanthis.model.ActivityResponse
 import retrofit2.http.GET
 import retrofit2.http.Query
 
-// Интерфейс для взаимодействия с Bored API
 interface ApiService {
-    // Получить случайную активность
-    @GET("api/activity")
+    @GET("random")
     suspend fun getRandomActivity(): ActivityResponse
 
-    // Получить активность с фильтрами
-    @GET("api/activity")
+    @GET("filter")
     suspend fun getActivityWithFilters(
         @Query("type") type: String? = null,
         @Query("participants") participants: Int? = null,
@@ -21,5 +18,5 @@ interface ApiService {
         @Query("accessibility") accessibility: Float? = null,
         @Query("minaccessibility") minAccessibility: Float? = null,
         @Query("maxaccessibility") maxAccessibility: Float? = null
-    ): ActivityResponse
+    ): List<ActivityResponse>
 }

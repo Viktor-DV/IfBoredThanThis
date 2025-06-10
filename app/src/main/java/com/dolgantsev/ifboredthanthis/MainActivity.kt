@@ -5,40 +5,91 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.RestaurantMenu
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.SelfImprovement
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.VolunteerActivism
+import androidx.compose.material.icons.filled.WorkOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.test.core.app.ApplicationProvider
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.dolgantsev.ifboredthanthis.data.ActivityEntity
 import com.dolgantsev.ifboredthanthis.model.ActivityResponse
 import com.dolgantsev.ifboredthanthis.ui.theme.IfBoredThanThisTheme
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import java.util.Calendar
+
+// Компонент экрана загрузки с анимацией
+@Composable
+fun MySplashScreen(onAnimationEnd: () -> Unit) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.Asset("start_screen_loading.json"))
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = 1,
+        isPlaying = true,
+        speed = 1f
+    )
+
+    LaunchedEffect(progress) {
+        if (progress >= 1f) {
+            onAnimationEnd()
+        }
+    }
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            modifier = Modifier.size(200.dp)
+        )
+    }
+}
 
 // Основной Activity приложения, запускается при старте
 class MainActivity : ComponentActivity() {
@@ -47,14 +98,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Установка контента с использованием Jetpack Compose
+        var showSplash by mutableStateOf(true)
+        // Установка контента
         setContent {
             IfBoredThanThisTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    AppScreen(viewModel)
+                if (showSplash) {
+                    MySplashScreen(onAnimationEnd = { showSplash = false })
+                } else {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        AppScreen(viewModel)
+                    }
                 }
             }
         }
@@ -67,9 +123,9 @@ fun AppScreen(viewModel: MainViewModel) {
     // Инициализация контроллера навигации
     val navController = rememberNavController()
     // Локализованные названия для элементов навигации
-    val navHome: String = stringResource(R.string.nav_home)
-    val navHistory: String = stringResource(R.string.nav_history)
-    val navFavorites: String = stringResource(R.string.nav_favorites)
+    val navHome = stringResource(R.string.nav_home)
+    val navHistory = stringResource(R.string.nav_history)
+    val navFavorites = stringResource(R.string.nav_favorites)
     val errorLabel = stringResource(R.string.error_label)
 
     // Отображение предупреждений для избранного
@@ -85,7 +141,10 @@ fun AppScreen(viewModel: MainViewModel) {
     // Сборка интерфейса с нижней навигационной панелью
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ) {
                 // Элемент навигации: Главная
                 NavigationBarItem(
                     selected = navController.currentBackStackEntry?.destination?.route == "moodSelection",
@@ -142,7 +201,7 @@ fun AppScreen(viewModel: MainViewModel) {
     }
 }
 
-// Экран выбора категории активности
+// Экран выбора категории активности с анимацией и раскрывающимися фильтрами
 @Composable
 fun MoodSelectionScreen(
     modifier: Modifier = Modifier,
@@ -160,7 +219,7 @@ fun MoodSelectionScreen(
     }
     val greeting = stringResource(greetingId)
 
-    // Локализованные строки для подписей
+    // Локализованные строки
     val participantsLabel = stringResource(R.string.filter_participants)
     val priceLabel = stringResource(R.string.filter_price)
     val accessibilityLabel = stringResource(R.string.filter_accessibility)
@@ -168,15 +227,8 @@ fun MoodSelectionScreen(
     val minMaxAccessibilityLabel = stringResource(R.string.filter_min_max_accessibility)
     val selectCategories = stringResource(R.string.select_categories)
     val accessibilityInfo = stringResource(R.string.accessibility_info)
+    val filtersTitle = stringResource(R.string.filters)
     val context = LocalContext.current
-
-    // Категории настроения — ресурсы строк
-    val categoryResIds = listOf(
-        R.string.mood_random, R.string.mood_education, R.string.mood_recreational,
-        R.string.mood_social, R.string.mood_diy, R.string.mood_charity,
-        R.string.mood_cooking, R.string.mood_relaxation, R.string.mood_music,
-        R.string.mood_busywork
-    )
 
     // Состояния из ViewModel
     val participants by viewModel.participants
@@ -185,9 +237,16 @@ fun MoodSelectionScreen(
     val accessibility by viewModel.accessibility
     val minMaxPrice by viewModel.minMaxPrice
     val minMaxAccessibility by viewModel.minMaxAccessibility
-    val selectedCategories by remember { derivedStateOf { viewModel.selectedCategories } }
 
-    // LazyColumn — основной контейнер с прокруткой для всей страницы
+    val categoryResIds = listOf(
+        R.string.mood_random, R.string.mood_education, R.string.mood_recreational,
+        R.string.mood_social, R.string.mood_diy, R.string.mood_charity,
+        R.string.mood_cooking, R.string.mood_relaxation, R.string.mood_music,
+        R.string.mood_busywork
+    )
+
+    var filtersExpanded by remember { mutableStateOf(false) }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -197,184 +256,317 @@ fun MoodSelectionScreen(
     ) {
         // Приветствие
         item {
-            Text(text = greeting, style = MaterialTheme.typography.headlineLarge)
+            Text(
+                text = greeting,
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onBackground
+            )
         }
-        // Блок выбора участников
+
+        // Заголовок категорий
         item {
-            Text(text = participantsLabel, style = MaterialTheme.typography.headlineSmall)
-            Box {
-                OutlinedTextField(
-                    value = participants?.toString() ?: stringResource(R.string.any_participants),
-                    onValueChange = {},
-                    readOnly = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    trailingIcon = {
-                        IconButton(onClick = { participantsExpanded = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = null)
+            Text(
+                text = selectCategories,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
+
+        // Кнопки категорий с иконками
+        item {
+            CategoryGrid(
+                selected = viewModel.selectedCategories,
+                onSelect = { viewModel.toggleCategory(it) }
+            )
+        }
+
+        // Заголовок "Нюансы" с кнопкой раскрытия
+        item {
+            ElevatedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { filtersExpanded = !filtersExpanded },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = filtersTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Icon(
+                        imageVector = if (filtersExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+
+        // Анимация фильтров
+        item {
+            AnimatedVisibility(
+                visible = filtersExpanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Выбор количества участников
+                    Text(text = participantsLabel, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
+                    Box {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { participantsExpanded = true }
+                        ) {
+                            OutlinedTextField(
+                                value = participants?.toString() ?: stringResource(R.string.any_participants),
+                                onValueChange = {},
+                                readOnly = true,
+                                enabled = false,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = TextFieldDefaults.colors(
+                                    focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedIndicatorColor = MaterialTheme.colorScheme.secondary
+                                ),
+                                trailingIcon = {
+                                    Icon(Icons.Default.MoreVert, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                                }
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = participantsExpanded,
+                            onDismissRequest = { participantsExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.any_participants), color = MaterialTheme.colorScheme.onSurface) },
+                                onClick = {
+                                    viewModel.setParticipants(null)
+                                    participantsExpanded = false
+                                }
+                            )
+                            (1..5).forEach { num ->
+                                DropdownMenuItem(
+                                    text = { Text(num.toString(), color = MaterialTheme.colorScheme.onSurface) },
+                                    onClick = {
+                                        viewModel.setParticipants(num)
+                                        participantsExpanded = false
+                                    }
+                                )
+                            }
                         }
                     }
-                )
-                DropdownMenu(
-                    expanded = participantsExpanded,
-                    onDismissRequest = { participantsExpanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.any_participants)) },
-                        onClick = {
-                            viewModel.setParticipants(null)
-                            participantsExpanded = false
+
+                    // Выбор цены
+                    Text(text = priceLabel, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        FilterChip(
+                            selected = price == "any",
+                            onClick = { viewModel.setPrice("any") },
+                            label = { Text(stringResource(R.string.any)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                selectedContainerColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                        FilterChip(
+                            selected = price == "free",
+                            onClick = { viewModel.setPrice("free") },
+                            label = { Text(stringResource(R.string.price_free)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                selectedContainerColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                        FilterChip(
+                            selected = price == "paid",
+                            onClick = { viewModel.setPrice("paid") },
+                            label = { Text(stringResource(R.string.price_paid_label)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                selectedContainerColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
+
+                    // Доступность
+                    Text(
+                        text = accessibilityLabel,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.clickable {
+                            Toast.makeText(context, accessibilityInfo, Toast.LENGTH_LONG).show()
                         }
                     )
-                    (1..5).forEach { num ->
-                        DropdownMenuItem(
-                            text = { Text(num.toString()) },
-                            onClick = {
-                                viewModel.setParticipants(num)
-                                participantsExpanded = false
+                    Slider(
+                        value = accessibility,
+                        onValueChange = { viewModel.setAccessibility(it) },
+                        valueRange = 0f..1f,
+                        steps = 10,
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.secondary
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    // Диапазон цены, если выбрано "платно"
+                    if (price != "free") {
+                        Text(text = minMaxPriceLabel, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
+                        RangeSlider(
+                            value = minMaxPrice.first..minMaxPrice.second,
+                            onValueChange = { range ->
+                                viewModel.setMinMaxPrice(range.start, range.endInclusive)
+                            },
+                            valueRange = 0f..1f,
+                            steps = 10,
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = MaterialTheme.colorScheme.secondary
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    // Диапазон доступности
+                    if (accessibility > 0f) {
+                        Text(
+                            text = minMaxAccessibilityLabel,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.clickable {
+                                Toast.makeText(context, accessibilityInfo, Toast.LENGTH_LONG).show()
                             }
+                        )
+                        RangeSlider(
+                            value = minMaxAccessibility.first..minMaxAccessibility.second,
+                            onValueChange = { range ->
+                                viewModel.setMinMaxAccessibility(range.start, range.endInclusive)
+                            },
+                            valueRange = 0f..1f,
+                            steps = 10,
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = MaterialTheme.colorScheme.secondary
+                            ),
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
             }
         }
-        // Блок выбора цены (фильтр по цене)
+
+        // Кнопка "Начать"
         item {
-            Text(text = priceLabel, style = MaterialTheme.typography.headlineSmall)
-            Row(
+            Button(
+                onClick = onStart,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                FilterChip(
-                    selected = price == "any",
-                    onClick = { viewModel.setPrice("any") },
-                    label = { Text(stringResource(R.string.any)) }
-                )
-                FilterChip(
-                    selected = price == "free",
-                    onClick = { viewModel.setPrice("free") },
-                    label = { Text(stringResource(R.string.price_free)) }
-                )
-                FilterChip(
-                    selected = price == "paid",
-                    onClick = { viewModel.setPrice("paid") },
-                    label = { Text(stringResource(R.string.price_paid)) }
-                )
-            }
-        }
-        // Слайдер доступности
-        item {
-            Text(
-                text = accessibilityLabel,
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.clickable {
-                    Toast.makeText(context, accessibilityInfo, Toast.LENGTH_LONG).show()
-                }
-            )
-            Slider(
-                value = accessibility,
-                onValueChange = { viewModel.setAccessibility(it) },
-                valueRange = 0f..1f,
-                steps = 10,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        // Если выбрана не бесплатная цена, показываем диапазон цен
-        if (price != "free") {
-            item {
-                Text(text = minMaxPriceLabel, style = MaterialTheme.typography.headlineSmall)
-                RangeSlider(
-                    value = minMaxPrice.first..minMaxPrice.second,
-                    onValueChange = { range ->
-                        viewModel.setMinMaxPrice(range.start, range.endInclusive)
-                    },
-                    valueRange = 0f..1f,
-                    steps = 10,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-        // Если доступность больше 0, показываем диапазон доступности
-        if (accessibility > 0f) {
-            item {
-                Text(
-                    text = minMaxAccessibilityLabel,
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.clickable {
-                        Toast.makeText(context, accessibilityInfo, Toast.LENGTH_LONG).show()
-                    }
-                )
-                RangeSlider(
-                    value = minMaxAccessibility.first..minMaxAccessibility.second,
-                    onValueChange = { range ->
-                        viewModel.setMinMaxAccessibility(range.start, range.endInclusive)
-                    },
-                    valueRange = 0f..1f,
-                    steps = 10,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-        // Заголовок для выбора категорий
-        item {
-            Text(text = selectCategories, style = MaterialTheme.typography.headlineSmall)
-        }
-        // Кнопки категорий: разбиваем на строки по 2 элемента и выводим в Row
-        val chunkedCategories = categoryResIds.chunked(2)
-        items(chunkedCategories.size) { rowIndex ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                chunkedCategories[rowIndex].forEach { categoryResId ->
-                    val isSelected = selectedCategories.contains(categoryResId)
-                    Button(
-                        onClick = { viewModel.toggleCategory(categoryResId) },
-                        shape = RoundedCornerShape(0.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .aspectRatio(1f)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            Image(
-                                painter = painterResource(R.drawable.cat),
-                                contentDescription = null,
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .padding(bottom = 8.dp)
-                            )
-                            Text(
-                                text = stringResource(categoryResId),
-                                style = MaterialTheme.typography.bodyLarge,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
-                // Если в ряду меньше 2 кнопок, добавляем пустой Spacer для выравнивания
-                if (chunkedCategories[rowIndex].size < 2) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-        // Кнопка начала
-        item {
-            Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.start_button))
+                Text(stringResource(R.string.start_button), color = MaterialTheme.colorScheme.onPrimary)
             }
         }
     }
 }
 
+// Компонент сетки категорий
+@Composable
+fun CategoryGrid(
+    selected: List<Int>,
+    onSelect: (Int) -> Unit
+) {
+    val categories = listOf(
+        Triple(R.string.mood_random, Icons.Default.Casino, "Случайная активность"),
+        Triple(R.string.mood_education, Icons.Default.School, "Обучение"),
+        Triple(R.string.mood_recreational, Icons.Default.SportsEsports, "Развлечения"),
+        Triple(R.string.mood_social, Icons.Default.Group, "Общение"),
+        Triple(R.string.mood_diy, Icons.Default.Build, "Сделай сам"),
+        Triple(R.string.mood_charity, Icons.Default.VolunteerActivism, "Благотворительность"),
+        Triple(R.string.mood_cooking, Icons.Default.RestaurantMenu, "Кулинария"),
+        Triple(R.string.mood_relaxation, Icons.Default.SelfImprovement, "Расслабление"),
+        Triple(R.string.mood_music, Icons.Default.MusicNote, "Музыка"),
+        Triple(R.string.mood_busywork, Icons.Default.WorkOutline, "Рутина")
+    )
 
-// Экран отображения рекомендации
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 400.dp)
+    ) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(categories) { (resId, icon, label) ->
+                val isSelected = resId in selected
+                val backgroundColor = if (isSelected)
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                else
+                    MaterialTheme.colorScheme.surfaceVariant
+
+                Surface(
+                    onClick = { onSelect(resId) },
+                    shape = RoundedCornerShape(16.dp),
+                    color = backgroundColor,
+                    tonalElevation = if (isSelected) 4.dp else 1.dp,
+                    shadowElevation = 2.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 64.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start,
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(vertical = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = label,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = stringResource(resId),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontSize = 12.sp,
+                            maxLines = 2,
+                            softWrap = true,
+                            modifier = Modifier
+                                .weight(1.5f)
+                                .padding(end = 8.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Экран отображения рекомендации с анимацией загрузки
 @Composable
 fun RecommendationScreen(
     modifier: Modifier = Modifier,
@@ -385,7 +577,25 @@ fun RecommendationScreen(
     onToggleFavorite: (ActivityResponse) -> Unit,
     isFavorite: suspend (ActivityResponse) -> Boolean
 ) {
-    // Основная колонка для отображения рекомендации с прокруткой
+    val context = LocalContext.current
+    // Загрузка анимации для состояния загрузки
+    val composition by rememberLottieComposition(LottieCompositionSpec.Asset("loading.json"))
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = LottieConstants.IterateForever
+    )
+    // Локальное состояние для отслеживания статуса избранного
+    var favoriteStatus by remember { mutableStateOf(false) }
+
+    // Обновляем статус избранного при изменении активности
+    LaunchedEffect(activity) {
+        favoriteStatus = if (activity != null) {
+            isFavorite(activity)
+        } else {
+            false
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -396,7 +606,8 @@ fun RecommendationScreen(
     ) {
         Text(
             text = stringResource(R.string.recommendation_title),
-            style = MaterialTheme.typography.headlineMedium
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground
         )
         if (errorMessage.isNotEmpty()) {
             Text(
@@ -407,61 +618,83 @@ fun RecommendationScreen(
         } else if (activity != null) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = stringResource(R.string.activity_label, activity.activity),
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = stringResource(R.string.type_label, activity.type),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = stringResource(R.string.participants_label, activity.participants),
-                        style = MaterialTheme.typography.bodyMedium
+                        text = stringResource(R.string.participants_label, activity.participants ?: 0),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = if (activity.price == 0f) stringResource(R.string.price_free)
-                        else stringResource(R.string.price_paid, activity.price),
-                        style = MaterialTheme.typography.bodyMedium
+                        else stringResource(R.string.price_paid, activity.price ?: 0f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     if (activity.link.isNotBlank()) {
                         Text(
                             text = stringResource(R.string.link_label, activity.link),
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
             }
-            val favoriteStatus by produceState(initialValue = false, activity) {
-                value = isFavorite(activity)
-            }
-            IconButton(onClick = { onToggleFavorite(activity) }) {
+            // Кнопка для переключения статуса избранного
+            IconButton(onClick = {
+                onToggleFavorite(activity)
+                favoriteStatus = !favoriteStatus // Оптимистическое обновление UI
+            }) {
                 Icon(
                     imageVector = if (favoriteStatus) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = stringResource(R.string.nav_favorites)
+                    contentDescription = stringResource(R.string.nav_favorites),
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
         } else {
-            CircularProgressIndicator()
+            // Отображение анимации загрузки
+            LottieAnimation(
+                composition = composition,
+                progress = { progress },
+                modifier = Modifier.size(150.dp)
+            )
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Button(onClick = onNewRecommendation) {
-                Text(stringResource(R.string.new_recommendation))
+            Button(
+                onClick = {
+                    onNewRecommendation()
+                    favoriteStatus = false // Сброс статуса при новой рекомендации
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text(stringResource(R.string.new_recommendation), color = MaterialTheme.colorScheme.onPrimary)
             }
-            Button(onClick = onBack) {
-                Text(stringResource(R.string.back))
+            Button(
+                onClick = onBack,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text(stringResource(R.string.back), color = MaterialTheme.colorScheme.onPrimary)
             }
         }
     }
 }
 
-// Экран истории
+// Экран истории с анимацией карточек
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
@@ -469,7 +702,7 @@ fun HistoryScreen(
     history: Flow<List<ActivityEntity>>,
     viewModel: MainViewModel
 ) {
-    // Состояние для списка активностей
+    // Собираем данные из Flow
     val activities by history.collectAsState(initial = emptyList())
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
@@ -486,57 +719,57 @@ fun HistoryScreen(
     )
 
     Scaffold(
+        modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.nav_history)) },
+                title = { Text(stringResource(R.string.nav_history), color = MaterialTheme.colorScheme.onSurface) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
                 actions = {
-                    var expanded by remember { mutableStateOf(false) }
-                    Box {
-                        OutlinedTextField(
-                            value = sortCategory.ifEmpty { stringResource(R.string.all_categories) },
-                            onValueChange = {},
-                            label = { Text(stringResource(R.string.sort_by_category)) },
-                            readOnly = true,
-                            modifier = Modifier
-                                .width(200.dp)
-                                .padding(end = 8.dp),
-                            trailingIcon = {
-                                IconButton(onClick = { expanded = true }) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = null)
-                                }
-                            }
-                        )
+                    // Кнопка выбора категории
+                    var categoryExpanded by remember { mutableStateOf(false) }
+                    Box(modifier = Modifier.padding(end = 8.dp)) {
+                        OutlinedButton(
+                            onClick = { categoryExpanded = true },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Text(sortCategory.ifEmpty { stringResource(R.string.all_categories) })
+                        }
                         DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
+                            expanded = categoryExpanded,
+                            onDismissRequest = { categoryExpanded = false }
                         ) {
                             categories.forEach { category ->
                                 DropdownMenuItem(
-                                    text = { Text(category) },
+                                    text = { Text(category, color = MaterialTheme.colorScheme.onSurface) },
                                     onClick = {
                                         viewModel.setHistorySortCategory(category)
-                                        expanded = false
+                                        categoryExpanded = false
                                     }
                                 )
                             }
                         }
                     }
+                    // Кнопка удаления
                     IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = null)
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = stringResource(R.string.delete),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                     DropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.delete)) },
+                            text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.onSurface) },
                             onClick = {
                                 showMenu = false
                                 showSelectDialog = true
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.delete_all)) },
+                            text = { Text(stringResource(R.string.delete_all), color = MaterialTheme.colorScheme.onSurface) },
                             onClick = {
                                 showMenu = false
                                 showDeleteAllDialog = true
@@ -547,52 +780,63 @@ fun HistoryScreen(
             )
         }
     ) { paddingValues ->
-        // Колонка с прокруткой для списка истории
-        Column(
+        LazyColumn(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Сообщение при пустом списке
             if (activities.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.history_placeholder),
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                item {
+                    Text(
+                        text = stringResource(R.string.history_placeholder),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(activities.size) { index ->
-                        ActivityCard(activity = activities[index])
-                    }
+                // Список активностей
+                items(activities.size) { index ->
+                    val activity = activities[index]
+                    ActivityCardAnimated(activity = activity)
                 }
             }
         }
+
+        // Диалог подтверждения удаления всех записей
         if (showDeleteAllDialog) {
             AlertDialog(
                 onDismissRequest = { showDeleteAllDialog = false },
-                title = { Text(stringResource(R.string.confirm_delete_all)) },
+                containerColor = MaterialTheme.colorScheme.surface,
+                title = { Text(stringResource(R.string.confirm_delete_all), color = MaterialTheme.colorScheme.onSurface) },
                 confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.deleteAllHistory()
-                        showDeleteAllDialog = false
-                        Toast.makeText(context, R.string.delete_success, Toast.LENGTH_SHORT).show()
-                    }) {
-                        Text(stringResource(R.string.delete))
+                    TextButton(
+                        onClick = {
+                            viewModel.deleteAllHistory()
+                            showDeleteAllDialog = false
+                            Toast.makeText(context, R.string.delete_success, Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteAllDialog = false }) {
-                        Text(stringResource(R.string.back))
+                        Text(stringResource(R.string.back), color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             )
         }
+
+        // Диалог выбора записей для удаления
         if (showSelectDialog) {
             AlertDialog(
                 onDismissRequest = { showSelectDialog = false },
-                title = { Text(stringResource(R.string.select_activities)) },
+                containerColor = MaterialTheme.colorScheme.surface,
+                title = { Text(stringResource(R.string.select_activities), color = MaterialTheme.colorScheme.onSurface) },
                 text = {
                     LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
                         items(activities.size) { index ->
@@ -613,9 +857,13 @@ fun HistoryScreen(
                                     onCheckedChange = {
                                         if (it) selectedIds.add(activity.id)
                                         else selectedIds.remove(activity.id)
-                                    }
+                                    },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedColor = MaterialTheme.colorScheme.onSurface
+                                    )
                                 )
-                                Text(text = activity.activity, modifier = Modifier.padding(start = 8.dp))
+                                Text(text = activity.activity, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(start = 8.dp))
                             }
                         }
                     }
@@ -630,12 +878,12 @@ fun HistoryScreen(
                         },
                         enabled = selectedIds.isNotEmpty()
                     ) {
-                        Text(stringResource(R.string.delete_selected))
+                        Text(stringResource(R.string.delete_selected), color = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showSelectDialog = false }) {
-                        Text(stringResource(R.string.back))
+                        Text(stringResource(R.string.back), color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             )
@@ -643,7 +891,7 @@ fun HistoryScreen(
     }
 }
 
-// Экран избранного
+// Экран избранного с анимацией карточек
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
@@ -651,7 +899,7 @@ fun FavoritesScreen(
     favorites: Flow<List<ActivityEntity>>,
     viewModel: MainViewModel
 ) {
-    // Состояние для списка избранных активностей
+    // Собираем данные из Flow
     val activities by favorites.collectAsState(initial = emptyList())
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
@@ -668,57 +916,57 @@ fun FavoritesScreen(
     )
 
     Scaffold(
+        modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.nav_favorites)) },
+                title = { Text(stringResource(R.string.nav_favorites), color = MaterialTheme.colorScheme.onSurface) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
                 actions = {
-                    var expanded by remember { mutableStateOf(false) }
-                    Box {
-                        OutlinedTextField(
-                            value = sortCategory.ifEmpty { stringResource(R.string.all_categories) },
-                            onValueChange = {},
-                            label = { Text(stringResource(R.string.sort_by_category)) },
-                            readOnly = true,
-                            modifier = Modifier
-                                .width(200.dp)
-                                .padding(end = 8.dp),
-                            trailingIcon = {
-                                IconButton(onClick = { expanded = true }) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = null)
-                                }
-                            }
-                        )
+                    // Кнопка выбора категории
+                    var categoryExpanded by remember { mutableStateOf(false) }
+                    Box(modifier = Modifier.padding(end = 8.dp)) {
+                        OutlinedButton(
+                            onClick = { categoryExpanded = true },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Text(sortCategory.ifEmpty { stringResource(R.string.all_categories) })
+                        }
                         DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
+                            expanded = categoryExpanded,
+                            onDismissRequest = { categoryExpanded = false }
                         ) {
                             categories.forEach { category ->
                                 DropdownMenuItem(
-                                    text = { Text(category) },
+                                    text = { Text(category, color = MaterialTheme.colorScheme.onSurface) },
                                     onClick = {
                                         viewModel.setFavoritesSortCategory(category)
-                                        expanded = false
+                                        categoryExpanded = false
                                     }
                                 )
                             }
                         }
                     }
+                    // Кнопка удаления
                     IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = null)
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = stringResource(R.string.delete),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                     DropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.delete)) },
+                            text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.onSurface) },
                             onClick = {
                                 showMenu = false
                                 showSelectDialog = true
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.delete_all)) },
+                            text = { Text(stringResource(R.string.delete_all), color = MaterialTheme.colorScheme.onSurface) },
                             onClick = {
                                 showMenu = false
                                 showDeleteAllDialog = true
@@ -729,52 +977,63 @@ fun FavoritesScreen(
             )
         }
     ) { paddingValues ->
-        // Колонка с прокруткой для списка избранного
-        Column(
+        LazyColumn(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Сообщение при пустом списке
             if (activities.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.favorites_placeholder),
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                item {
+                    Text(
+                        text = stringResource(R.string.favorites_placeholder),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(activities.size) { index ->
-                        ActivityCard(activity = activities[index])
-                    }
+                // Список активностей
+                items(activities.size) { index ->
+                    val activity = activities[index]
+                    ActivityCardAnimated(activity = activity)
                 }
             }
         }
+
+        // Диалог подтверждения удаления всех записей
         if (showDeleteAllDialog) {
             AlertDialog(
                 onDismissRequest = { showDeleteAllDialog = false },
-                title = { Text(stringResource(R.string.confirm_delete_all)) },
+                containerColor = MaterialTheme.colorScheme.surface,
+                title = { Text(stringResource(R.string.confirm_delete_all), color = MaterialTheme.colorScheme.onSurface) },
                 confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.deleteAllFavorites()
-                        showDeleteAllDialog = false
-                        Toast.makeText(context, R.string.delete_success, Toast.LENGTH_SHORT).show()
-                    }) {
-                        Text(stringResource(R.string.delete))
+                    TextButton(
+                        onClick = {
+                            viewModel.deleteAllFavorites()
+                            showDeleteAllDialog = false
+                            Toast.makeText(context, R.string.delete_success, Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteAllDialog = false }) {
-                        Text(stringResource(R.string.back))
+                        Text(stringResource(R.string.back), color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             )
         }
+
+        // Диалог выбора записей для удаления
         if (showSelectDialog) {
             AlertDialog(
                 onDismissRequest = { showSelectDialog = false },
-                title = { Text(stringResource(R.string.select_activities)) },
+                containerColor = MaterialTheme.colorScheme.surface,
+                title = { Text(stringResource(R.string.select_activities), color = MaterialTheme.colorScheme.onSurface) },
                 text = {
                     LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
                         items(activities.size) { index ->
@@ -795,9 +1054,13 @@ fun FavoritesScreen(
                                     onCheckedChange = {
                                         if (it) selectedIds.add(activity.id)
                                         else selectedIds.remove(activity.id)
-                                    }
+                                    },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedColor = MaterialTheme.colorScheme.onSurface
+                                    )
                                 )
-                                Text(text = activity.activity, modifier = Modifier.padding(start = 8.dp))
+                                Text(text = activity.activity, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(start = 8.dp))
                             }
                         }
                     }
@@ -812,12 +1075,12 @@ fun FavoritesScreen(
                         },
                         enabled = selectedIds.isNotEmpty()
                     ) {
-                        Text(stringResource(R.string.delete_selected))
+                        Text(stringResource(R.string.delete_selected), color = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showSelectDialog = false }) {
-                        Text(stringResource(R.string.back))
+                        Text(stringResource(R.string.back), color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             )
@@ -825,84 +1088,48 @@ fun FavoritesScreen(
     }
 }
 
-// Компонент карточки активности
+// Компонент анимированной карточки активности
 @Composable
-fun ActivityCard(activity: ActivityEntity) {
-    // Карточка с информацией об активности
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+fun ActivityCardAnimated(activity: ActivityEntity) {
+    AnimatedVisibility(
+        visible = true,
+        enter = fadeIn() + expandVertically()
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = stringResource(R.string.activity_label, activity.activity),
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = stringResource(R.string.type_label, activity.type),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = stringResource(R.string.participants_label, activity.participants),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = if (activity.price == 0f) stringResource(R.string.price_free)
-                else stringResource(R.string.price_paid, activity.price),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            if (activity.link.isNotBlank()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = stringResource(R.string.link_label, activity.link),
-                    style = MaterialTheme.typography.bodyMedium
+                    text = stringResource(R.string.activity_label, activity.activity),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+                Text(
+                    text = stringResource(R.string.type_label, activity.type),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(R.string.participants_label, activity.participants),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = if (activity.price == 0f) stringResource(R.string.price_free)
+                    else stringResource(R.string.price_paid, activity.price),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (activity.link.isNotBlank()) {
+                    Text(
+                        text = stringResource(R.string.link_label, activity.link),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
     }
 }
-
-// Предпросмотры
-//@Preview(showBackground = true)
-//@Composable
-//fun MoodSelectionScreenPreview() {
-//    IfBoredThanThisTheme {
-//        MoodSelectionScreen(viewModel = MainViewModel(ApplicationProvider.getApplicationContext()), onStart = {})
-//    }
-//}
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun RecommendationScreenPreview() {
-//    IfBoredThanThisTheme {
-//        RecommendationScreen(
-//            activity = ActivityResponse("Test Activity", "recreational", 1, 0f, "", "test"),
-//            errorMessage = "",
-//            onBack = {},
-//            onNewRecommendation = {},
-//            onToggleFavorite = {},
-//            isFavorite = { false }
-//        )
-//    }
-//}
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun HistoryScreenPreview() {
-//    IfBoredThanThisTheme {
-//        HistoryScreen(
-//            history = flowOf(listOf(ActivityEntity("Test", "recreational", 1, 0f, "", System.currentTimeMillis(), false))),
-//            viewModel = MainViewModel(ApplicationProvider.getApplicationContext())
-//        )
-//    }
-//}
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun FavoritesScreenPreview() {
-//    IfBoredThanThisTheme {
-//        FavoritesScreen(
-//            favorites = flowOf(listOf(ActivityEntity("Test", "recreational", 1, 0f, "", System.currentTimeMillis(), true))),
-//            viewModel = MainViewModel(ApplicationProvider.getApplicationContext())
-//        )
-//    }
-//}

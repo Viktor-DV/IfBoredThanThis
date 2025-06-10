@@ -69,4 +69,5 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     debugImplementation(libs.androidx.test.core)
+    implementation(libs.lottie.compose)
 }

@@ -12,6 +12,6 @@ data class ActivityEntity(
     val participants: Int,
     val price: Float,
     val link: String,
-    val timestamp: Long, // Время добавления
-    val isFavorite: Boolean // Флаг для избранного
+    val timestamp: Long,
+    val isFavorite: Boolean
 )

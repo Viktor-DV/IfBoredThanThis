@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.SelfImprovement
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material.icons.filled.WorkOutline
@@ -46,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -55,7 +57,9 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.dolgantsev.ifboredthanthis.data.ActivityEntity
+import com.dolgantsev.ifboredthanthis.data.SettingsDataStore
 import com.dolgantsev.ifboredthanthis.model.ActivityResponse
+import com.dolgantsev.ifboredthanthis.ui.settings.SettingsScreen
 import com.dolgantsev.ifboredthanthis.ui.theme.IfBoredThanThisTheme
 import kotlinx.coroutines.flow.Flow
 import java.util.Calendar
@@ -101,7 +105,19 @@ class MainActivity : ComponentActivity() {
         var showSplash by mutableStateOf(true)
         // Установка контента
         setContent {
-            IfBoredThanThisTheme {
+            // Чтение настроек из DataStore
+            val context = LocalContext.current
+            val settingsFlow = remember { SettingsDataStore.readSettings(context) }
+            val settings by settingsFlow.collectAsState(
+                initial = SettingsDataStore.UserSettings(
+                    historyLimit = 50,
+                    isDarkTheme = true,
+                    showWarnings = true
+                )
+            )
+
+            // Применение темы с учётом isDarkTheme из настроек
+            IfBoredThanThisTheme(useDarkTheme = settings.isDarkTheme) {
                 if (showSplash) {
                     MySplashScreen(onAnimationEnd = { showSplash = false })
                 } else {
@@ -176,7 +192,9 @@ fun AppScreen(viewModel: MainViewModel) {
             modifier = Modifier.padding(paddingValues)
         ) {
             composable("moodSelection") {
-                MoodSelectionScreen(viewModel = viewModel, onStart = {
+                MoodSelectionScreen(viewModel = viewModel,
+                    navController = navController,
+                    onStart = {
                     viewModel.loadActivity(errorLabel)
                     navController.navigate("recommendation")
                 })
@@ -197,6 +215,9 @@ fun AppScreen(viewModel: MainViewModel) {
             composable("favorites") {
                 FavoritesScreen(favorites = viewModel.getFavorites(), viewModel = viewModel)
             }
+            composable("settings") {
+                SettingsScreen(onBack = { navController.popBackStack() })
+            }
         }
     }
 }
@@ -206,6 +227,7 @@ fun AppScreen(viewModel: MainViewModel) {
 fun MoodSelectionScreen(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel,
+    navController: NavController,
     onStart: () -> Unit
 ) {
     // Получаем текущее время для выбора приветствия
@@ -254,13 +276,29 @@ fun MoodSelectionScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Приветствие
+        // Строка приветствия + кнопка "Настройки"
         item {
-            Text(
-                text = greeting,
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.onBackground
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = greeting,
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                // Кнопка "Настройки"
+                IconButton(onClick = { navController.navigate("settings") }) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = stringResource(R.string.settings),
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
         }
 
         // Заголовок категорий

@@ -34,6 +34,7 @@
     <string name="error_unknown">Неизвестная ошибка</string>
     <string name="favorites_limit">В избранном слишком много записей (%1$d). Это может замедлить приложение. Удалите ненужные активности.</string>
     <string name="start_button">НАЧНЁМ</string>
+    <string name="settings">Настройки</string>
     <string name="filter_participants">Количество участников</string>
     <string name="filter_price">Цена</string>
     <string name="filter_accessibility">Доступность</string>
@@ -52,4 +53,9 @@
     <string name="sort_by_category">Сортировать по категории</string>
     <string name="all_categories">Все категории</string>
     <string name="filters">Нюансы</string>
+    <string name="history_limit_label">Максимум записей в истории:</string>
+    <string name="dark_theme_label">Тёмная тема</string>
+    <string name="show_warnings_label">Показывать предупреждения</string>
+    <string name="save_button">Сохранить</string>
+    <string name="save_settings_success">Настройки сохранены</string>
 </resources>

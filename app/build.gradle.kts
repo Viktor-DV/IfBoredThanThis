@@ -70,4 +70,6 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     debugImplementation(libs.androidx.test.core)
     implementation(libs.lottie.compose)
+    implementation(libs.androidx.datastore.preferences)
+
 }
